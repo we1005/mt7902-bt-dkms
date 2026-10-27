@@ -1,0 +1,33 @@
+name: Bug report
+description: Install fails, module does not load, Bluetooth misbehaves.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: input
+    id: kernel
+    attributes:
+      label: "`uname -r`"
+    validations:
+      required: true
+  - type: input
+    id: usbid
+    attributes:
+      label: "Bluetooth USB ID (`lsusb | grep -iE '0e8d|13d3|0489'`)"
+    validations:
+      required: true
+  - type: dropdown
+    id: sb
+    attributes:
+      label: Secure Boot
+      options: ["Disabled", "Enabled", "Not sure"]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: "`dkms status`, `modinfo -n btmtk`, `sudo dmesg | grep -iE 'hci0|btmtk|btusb|firmware'`, and `/var/lib/dkms/btmtk-mt7902/1.0/build/make.log` if the build failed."
+      render: shell

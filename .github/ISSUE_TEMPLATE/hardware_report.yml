@@ -1,0 +1,43 @@
+name: Hardware report
+description: Tell us whether this works on your machine (success or failure).
+title: "[report] "
+labels: ["hardware-report"]
+body:
+  - type: input
+    id: machine
+    attributes:
+      label: Machine / laptop model
+    validations:
+      required: true
+  - type: input
+    id: kernel
+    attributes:
+      label: "`uname -r`"
+    validations:
+      required: true
+  - type: input
+    id: usbid
+    attributes:
+      label: "Bluetooth USB ID (`lsusb | grep -iE '0e8d|13d3|0489'`)"
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result
+      options:
+        - Works (hci0 UP RUNNING, scan OK)
+        - Partly works
+        - Does not work
+    validations:
+      required: true
+  - type: textarea
+    id: tested
+    attributes:
+      label: What did you test?
+      description: Scan, pairing, audio (A2DP/HFP), HID, suspend/resume, Secure Boot …
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output of `hciconfig -a`, `dkms status`, `sudo dmesg | grep -iE 'hci0|btmtk|btusb'`
+      render: shell

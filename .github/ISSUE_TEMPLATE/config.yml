@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Upstream Bluetooth mailing list
+    url: https://lore.kernel.org/linux-bluetooth/
+    about: For problems in the Linux Bluetooth stack itself, not this packaging.

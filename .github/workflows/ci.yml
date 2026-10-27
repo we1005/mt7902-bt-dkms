@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint scripts and sources
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck
+          shellcheck install.sh uninstall.sh
+      - name: SPDX headers present
+        run: |
+          for f in Makefile src/Kbuild dkms.conf install.sh uninstall.sh src/btmtk.c src/btmtk.h; do
+            head -3 "$f" | grep -q 'SPDX-License-Identifier:' || { echo "missing SPDX in $f"; exit 1; }
+          done
+      - name: MT7902 patch is present in src/
+        run: |
+          grep -q 'case 0x7902:' src/btmtk.c
+          grep -q 'FIRMWARE_MT7902' src/btmtk.h
+
+  build:
+    name: Build against Linux 6.17 headers
+    runs-on: ubuntu-24.04
+    container: ubuntu:24.04
+    steps:
+      - name: Install toolchain and newest 6.17 headers
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq build-essential git libelf-dev kmod
+          H=$(apt-cache search --names-only '^linux-headers-6\.17\.[0-9]+-[0-9]+-generic$' | awk '{print $1}' | sort -V | tail -1)
+          [ -n "$H" ] || { echo "no linux-headers-6.17.* in the archive any more"; exit 1; }
+          echo "Using $H"
+          apt-get install -y -qq "$H"
+          echo "KVER=${H#linux-headers-}" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+      - name: Build btmtk.ko
+        run: make KVER="$KVER"
+      - name: Inspect module
+        run: |
+          modinfo src/btmtk.ko
+          modinfo src/btmtk.ko | grep -q "vermagic:.*$KVER"
+          modinfo src/btmtk.ko | grep -q '^depends:.*bluetooth'

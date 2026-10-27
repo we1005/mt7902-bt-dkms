@@ -1,0 +1,7 @@
+upstream/
+*.ko
+*.o
+*.mod*
+.*.cmd
+Module.symvers
+modules.order
