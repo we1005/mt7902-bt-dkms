@@ -5,7 +5,7 @@
 # Usage: sudo ./uninstall.sh
 set -eu
 NAME=btmtk-mt7902
-VER=1.0
+VER=1.1
 [ "$(id -u)" -eq 0 ] || { echo "run as root: sudo $0" >&2; exit 1; }
 
 dkms remove -m "$NAME" -v "$VER" --all 2>/dev/null || true

@@ -1,10 +1,10 @@
 # mt7902-bt-dkms
 
-**Bluetooth for the MediaTek MT7902 on Linux 6.17 — a DKMS backport of the upstream `btmtk` patch.**
+**Bluetooth for the MediaTek MT7902 on Linux 6.17 and 7.0 — a DKMS backport of the upstream `btmtk` patch.**
 
 [![CI](https://github.com/we1005/mt7902-bt-dkms/actions/workflows/ci.yml/badge.svg)](https://github.com/we1005/mt7902-bt-dkms/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Kernel](https://img.shields.io/badge/kernel-6.17.x-orange.svg)](#compatibility)
+[![Kernel](https://img.shields.io/badge/kernel-6.17.x%20%7C%207.0.x-orange.svg)](#compatibility)
 [![Upstream](https://img.shields.io/badge/upstream-Linux%207.1-success.svg)](https://git.kernel.org/torvalds/c/aab25984e559)
 
 English · [简体中文](README.zh-CN.md)
@@ -13,7 +13,7 @@ English · [简体中文](README.zh-CN.md)
 
 ## The problem
 
-On Ubuntu 24.04 (HWE kernel 6.17) the Bluetooth half of a **MediaTek MT7902** (Filogic 310, Wi-Fi 6E + Bluetooth combo card) does not work:
+On Ubuntu 24.04 (HWE kernel 6.17) the Bluetooth half of a **MediaTek MT7902** (Wi-Fi/Bluetooth combo card) does not work:
 
 ```console
 $ dmesg | grep hci0
@@ -32,7 +32,7 @@ hci0:  Type: Primary  Bus: USB
 MediaTek's Sean Wang fixed this upstream with a **two-line** change, merged for **Linux 7.1**:
 [`aab25984e559` — *Bluetooth: btmtk: add MT7902 MCU support*](https://git.kernel.org/torvalds/c/aab25984e559).
 
-This repository packages that change for **6.17** as a small DKMS module:
+This repository packages that change for **6.17 and 7.0** as a small DKMS module:
 
 ```diff
 --- a/drivers/bluetooth/btmtk.c
@@ -47,7 +47,7 @@ This repository packages that change for **6.17** as a small DKMS module:
 +#define FIRMWARE_MT7902		"mediatek/BT_RAM_CODE_MT7902_1_1_hdr.bin"
 ```
 
-> **This is not a new driver and not original driver work.** The change is MediaTek's, verbatim (author and sign-offs preserved in [`patches/`](patches/)). What this repo adds is the packaging for 6.17, the install/uninstall scripts, and a documented verification.
+> **This is not a new driver and not original driver work.** The change is MediaTek's, verbatim (author and sign-offs preserved in [`patches/`](patches/)). What this repo adds is the packaging for 6.17 and 7.0, the install/uninstall scripts, and a documented verification.
 >
 > **The Wi-Fi half of the MT7902 is a different driver (mt76) and is not covered here.** See [morrownr/mt76](https://github.com/morrownr/mt76) for an out-of-tree Wi-Fi driver.
 
@@ -92,15 +92,15 @@ sudo ./uninstall.sh
                   └────────────┘
 ```
 
-The patched `btmtk` is built as a module with the **same name** and installed to `/lib/modules/<ver>/updates/dkms/`. `depmod` prefers `updates/` over `kernel/`, so the stock module is shadowed — no blacklisting. `btusb` and the Bluetooth core are not modified. DKMS rebuilds it for new 6.17.x kernel packages.
+The patched `btmtk` is built as a module with the **same name** and installed to `/lib/modules/<ver>/updates/dkms/`. `depmod` prefers `updates/` over `kernel/`, so the stock module is shadowed — no blacklisting. `btusb` and the Bluetooth core are not modified. DKMS rebuilds it for new packages in the supported 6.17.x and 7.0.x series. Each series uses its own source baseline (`src/` and `src-7.0/` respectively).
 
 ## Compatibility
 
 | | |
 |---|---|
-| Kernel | **6.17.x only** (enforced by `BUILD_EXCLUSIVE_KERNEL="^6\.17\."` in `dkms.conf`). The bundled source is Ubuntu `Ubuntu-hwe-6.17-6.17.0-19.19_24.04.2`, which is byte-identical to upstream v6.17 for `btmtk.c`/`btmtk.h`. |
+| Kernel | **6.17.x and 7.0.x**, enforced by `BUILD_EXCLUSIVE_KERNEL`. The 6.17 baseline remains unchanged. The 7.0 source is from Ubuntu tag `Ubuntu-hwe-7.0-7.0.0-38.38_24.04.4`; only the two MT7902 additions are applied. |
 | Kernel ≥ 7.1 | **Do not use** — the support is already in-tree, and the bundled `btmtk.c` would be older than the kernel's. Run `./uninstall.sh`. |
-| Other series (6.18 – 7.0, ≤ 6.16) | Untested and refused by DKMS. |
+| Other series (6.18, 6.19, ≤ 6.16) | Untested and refused by DKMS. |
 | Firmware | `/lib/firmware/mediatek/BT_RAM_CODE_MT7902_1_1_hdr.bin` must exist. Ubuntu 24.04's stock `linux-firmware` (20240318) does **not** ship it — take it from [linux-firmware.git](https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/tree/mediatek). `install.sh` warns if it is missing. |
 
 ### Which MT7902 Bluetooth devices does this help?
@@ -132,7 +132,9 @@ One machine so far. **Reports from other hardware are very welcome** — see [CO
 | Rollback | `uninstall.sh` returns to the broken stock behaviour, `install.sh` restores it (same machine, same kernel — only `btmtk` changes) |
 | Reboot | module is picked up from `updates/dkms/` automatically, `hci0` comes up |
 
-**Not tested:** pairing/connecting, A2DP/HFP audio, HID devices, suspend/resume, long-running stability, Secure Boot with MOK enrollment, any other hardware.
+**Additional testing on 2026-11-10:** Ubuntu 24.04.4 with `7.0.0-38-generic`: DKMS 1.1 installed and loaded, pairing with an Android phone succeeded, OBEX sent a 4,141-byte generated file with `Status=complete`, and five L2CAP echo requests all returned. The 6.17 source also passed a build regression check.
+
+**Not yet established by these tests:** A2DP/HFP audio quality, HID behavior, long-running stability, Secure Boot with MOK enrollment, or any other hardware. Reboot and suspend/resume results for 7.0 are tracked in [docs/TESTING.md](docs/TESTING.md).
 
 Details: [docs/TESTING.md](docs/TESTING.md).
 
@@ -146,7 +148,8 @@ See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md). The common ones:
 
 ## Roadmap
 
-- [ ] Confirm pairing, audio and suspend/resume on real devices
+- [x] Pair with an Android phone and transfer a generated file on 7.0
+- [ ] Verify audio, HID and sustained use on real devices
 - [ ] Optional `btusb` patch for the extra MT7902 USB IDs added in 7.1 (needs hardware to test)
 - [ ] Cherry-pick the 7.1 `btmtk` robustness fixes if firmware download turns out to be flaky (deliberately **not** included — minimal change first)
 - [ ] Test other Ubuntu kernel flavours (`-lowlatency`, `-oem`) and Debian
@@ -159,7 +162,7 @@ See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md). The common ones:
 
 ## License
 
-- `src/btmtk.c`, `src/btmtk.h` — Copyright (C) 2021 MediaTek Inc., **ISC** (SPDX header kept as in the kernel tree). `MODULE_LICENSE("GPL")` as in the original.
+- `src/btmtk.c`, `src/btmtk.h`, `src-7.0/btmtk.c`, `src-7.0/btmtk.h` — Copyright (C) 2021 MediaTek Inc., **ISC** (SPDX header kept as in the kernel tree). `MODULE_LICENSE("GPL")` as in the original.
 - Everything else (Makefile, Kbuild, `dkms.conf`, scripts, docs) — **MIT**, Copyright (c) 2026 ljc. See [LICENSE](LICENSE).
 - The patch in [`patches/`](patches/) is the unmodified upstream commit.
 

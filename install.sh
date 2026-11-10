@@ -8,7 +8,7 @@
 set -eu
 
 NAME=btmtk-mt7902
-VER=1.0
+VER=1.1
 SRC=/usr/src/$NAME-$VER
 HERE=$(cd "$(dirname "$0")" && pwd)
 RELOAD=0
@@ -19,9 +19,9 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 [ "$(id -u)" -eq 0 ] || die "run as root: sudo $0"
 KVER=$(uname -r)
 case "$KVER" in
-	6.17.*) ;;
-	*) die "kernel $KVER is not 6.17.x. Kernels >= 7.1 already support MT7902 Bluetooth;" \
-	       "other series are untested (the bundled btmtk.c is based on v6.17)." ;;
+	6.17.*|7.0.*) ;;
+	*) die "kernel $KVER is not a supported 6.17.x or 7.0.x series." \
+	       "Kernels >= 7.1 already support MT7902 Bluetooth; other series are untested." ;;
 esac
 command -v dkms >/dev/null 2>&1 || die "dkms not found (Debian/Ubuntu: apt install dkms)"
 [ -f "/lib/modules/$KVER/build/Makefile" ] || die "kernel headers missing (apt install linux-headers-$KVER)"
@@ -40,7 +40,7 @@ if dkms status -m "$NAME" -v "$VER" 2>/dev/null | grep -q "$NAME"; then
 fi
 rm -rf "$SRC"
 mkdir -p "$SRC"
-cp -r "$HERE/dkms.conf" "$HERE/Makefile" "$HERE/src" "$SRC/"
+cp -r "$HERE/dkms.conf" "$HERE/Makefile" "$HERE/src" "$HERE/src-7.0" "$SRC/"
 
 dkms add -m "$NAME" -v "$VER"
 dkms build -m "$NAME" -v "$VER" -k "$KVER"

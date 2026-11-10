@@ -1,6 +1,6 @@
 # mt7902-bt-dkms
 
-**让 MediaTek MT7902 的蓝牙在 Linux 6.17 上可用：上游 `btmtk` 补丁的 DKMS 回移植。**
+**让 MediaTek MT7902 的蓝牙在 Linux 6.17 和 7.0 上可用：上游 `btmtk` 补丁的 DKMS 回移植。**
 
 [English](README.md) · 简体中文
 
@@ -8,7 +8,7 @@
 
 ## 问题
 
-在 Ubuntu 24.04（HWE 内核 6.17）上，**MediaTek MT7902**（Filogic 310，Wi-Fi 6E + 蓝牙二合一）的**蓝牙**不工作：
+在 Ubuntu 24.04（HWE 内核 6.17）上，**MediaTek MT7902**（Wi-Fi 与蓝牙二合一）的**蓝牙**不工作：
 
 ```console
 $ dmesg | grep hci0
@@ -27,9 +27,9 @@ hci0:  Type: Primary  Bus: USB
 MediaTek 的 Sean Wang 已在上游用**两行**改动修好，合入 **Linux 7.1**：
 [`aab25984e559` — *Bluetooth: btmtk: add MT7902 MCU support*](https://git.kernel.org/torvalds/c/aab25984e559)。
 
-本仓库把这个改动打包成适用于 **6.17** 的小型 DKMS 模块：`btmtk.c` 里加一行 `case 0x7902:`，`btmtk.h` 里加一行 `FIRMWARE_MT7902` 固件路径定义。
+本仓库把这个改动打包成适用于 **6.17 和 7.0** 的小型 DKMS 模块：`btmtk.c` 里加一行 `case 0x7902:`，`btmtk.h` 里加一行 `FIRMWARE_MT7902` 固件路径定义。
 
-> **这不是新写的驱动，也不是原创的驱动工作。** 改动本身是 MediaTek 的，原样保留（作者与签名见 [`patches/`](patches/)）。本仓库做的是：为 6.17 打包、安装/卸载脚本、以及有记录的验证。
+> **这不是新写的驱动，也不是原创的驱动工作。** 改动本身是 MediaTek 的，原样保留（作者与签名见 [`patches/`](patches/)）。本仓库做的是：为 6.17 和 7.0 打包、安装/卸载脚本、以及有记录的验证。
 >
 > **MT7902 的 Wi-Fi 部分是另一个驱动（mt76），不在本仓库范围内**，可参考 [morrownr/mt76](https://github.com/morrownr/mt76)。
 
@@ -60,15 +60,15 @@ sudo ./uninstall.sh
 
 ## 原理
 
-打过补丁的 `btmtk` 编译成**同名**模块，装到 `/lib/modules/<版本>/updates/dkms/`。`depmod` 默认让 `updates/` 优先于 `kernel/`，因此内核自带的模块被遮蔽，不需要 `blacklist`。`btusb` 和蓝牙核心都没有改动。内核升级到新的 6.17.x 时，DKMS 会自动重新编译。
+打过补丁的 `btmtk` 编译成**同名**模块，装到 `/lib/modules/<版本>/updates/dkms/`。`depmod` 默认让 `updates/` 优先于 `kernel/`，因此内核自带的模块被遮蔽，不需要 `blacklist`。`btusb` 和蓝牙核心都没有改动。内核升级到支持范围内的新 6.17.x 或 7.0.x 时，DKMS 会自动重新编译；分别使用 `src/` 和 `src-7.0/` 中对应系列的源码。
 
 ## 兼容性
 
 | | |
 |---|---|
-| 内核 | **只支持 6.17.x**（`dkms.conf` 里 `BUILD_EXCLUSIVE_KERNEL="^6\.17\."` 强制）。内置的源码来自 Ubuntu `Ubuntu-hwe-6.17-6.17.0-19.19_24.04.2`，这两个文件与上游 v6.17 逐字相同 |
+| 内核 | **支持 6.17.x 与 7.0.x**，由 `BUILD_EXCLUSIVE_KERNEL` 限定。6.17 源码保持原样；7.0 基线来自 Ubuntu 标签 `Ubuntu-hwe-7.0-7.0.0-38.38_24.04.4`，仅加入两行 MT7902 上游补丁 |
 | 内核 ≥ 7.1 | **不要使用**：内核已自带支持，而且本仓库的 `btmtk.c` 比内核的旧。请运行 `./uninstall.sh` |
-| 其他版本（6.18–7.0、≤ 6.16） | 未测试，DKMS 会拒绝构建 |
+| 其他版本（6.18、6.19、≤ 6.16） | 未测试，DKMS 会拒绝构建 |
 | 固件 | 必须有 `/lib/firmware/mediatek/BT_RAM_CODE_MT7902_1_1_hdr.bin`。Ubuntu 24.04 自带的 `linux-firmware`（20240318）**没有**，请从 [linux-firmware.git](https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/tree/mediatek) 获取；缺失时 `install.sh` 会警告 |
 
 ### 哪些 MT7902 蓝牙设备能用？
@@ -100,13 +100,16 @@ sudo ./uninstall.sh
 | 回滚 | `uninstall.sh` 回到不可用状态，`install.sh` 恢复（同机同内核，只换 `btmtk`） |
 | 重启 | 自动从 `updates/dkms/` 加载，`hci0` 自动起来 |
 
-**没测：** 配对与连接、A2DP/HFP 音频、HID 设备、休眠唤醒、长时间稳定性、开启 Secure Boot 的 MOK 流程、任何其他硬件。
+**2026-11-10 新增实测：** Ubuntu 24.04.4、`7.0.0-38-generic` 上，DKMS 1.1 安装和加载成功；与 Android 手机配对成功，OBEX 发送现场生成的 4,141 字节文件，返回 `Status=complete`；L2CAP 回显 5 发 5 收。6.17 源码也重新编译通过。
+
+**仍未确认：** A2DP/HFP 音质、HID 使用、长期稳定性、开启 Secure Boot 的 MOK 流程和其他硬件。7.0 的重启与休眠恢复结果见 [docs/TESTING.md](docs/TESTING.md)。
 
 详情：[docs/TESTING.md](docs/TESTING.md)。故障排查：[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)。
 
 ## 路线图
 
-- [ ] 在真实设备上确认配对、音频、休眠唤醒
+- [x] 在 7.0 上与 Android 手机配对并传输测试文件
+- [ ] 验证真实音频、HID 和长期使用
 - [ ] 为 7.1 新增的其他 MT7902 USB ID 提供可选的 `btusb` 补丁（需要硬件才能测）
 - [ ] 如果固件下载不稳，再挑选 7.1 里 `btmtk` 的稳定性修复（目前**刻意不带**：先做最小改动）
 - [ ] 测试其他 Ubuntu 内核变体（`-lowlatency`、`-oem`）和 Debian
@@ -119,7 +122,7 @@ sudo ./uninstall.sh
 
 ## 许可证
 
-- `src/btmtk.c`、`src/btmtk.h`：Copyright (C) 2021 MediaTek Inc.，**ISC**（保留内核源码中的 SPDX 头），`MODULE_LICENSE("GPL")` 与原文件一致。
+- `src/btmtk.c`、`src/btmtk.h`、`src-7.0/btmtk.c`、`src-7.0/btmtk.h`：Copyright (C) 2021 MediaTek Inc.，**ISC**（保留内核源码中的 SPDX 头），`MODULE_LICENSE("GPL")` 与原文件一致。
 - 其余文件（Makefile、Kbuild、`dkms.conf`、脚本、文档）：**MIT**，Copyright (c) 2026 ljc，见 [LICENSE](LICENSE)。
 - [`patches/`](patches/) 中的补丁是未修改的上游提交。
 

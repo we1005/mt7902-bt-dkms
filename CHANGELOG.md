@@ -2,6 +2,16 @@
 
 All notable changes are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- A separate Ubuntu 7.0.0-38 `btmtk` source baseline with the same upstream MT7902 patch.
+- DKMS package 1.1 selects the source baseline for 6.17.x or 7.0.x.
+
+### Verified
+- On Ubuntu 24.04.4 / 7.0.0-38: module load, Android phone pairing, OBEX transfer, L2CAP echo, S3 suspend/resume and reboot.
+- Build regression against installed 6.17.0-19 headers.
+
 ## [1.0.0] - 2026-10-27
 
 ### Added

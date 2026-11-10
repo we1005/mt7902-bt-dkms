@@ -18,25 +18,50 @@ jobs:
           shellcheck install.sh uninstall.sh
       - name: SPDX headers present
         run: |
-          for f in Makefile src/Kbuild dkms.conf install.sh uninstall.sh src/btmtk.c src/btmtk.h; do
+          for f in Makefile src/Kbuild src-7.0/Kbuild dkms.conf install.sh uninstall.sh src/btmtk.c src/btmtk.h src-7.0/btmtk.c src-7.0/btmtk.h; do
             head -3 "$f" | grep -q 'SPDX-License-Identifier:' || { echo "missing SPDX in $f"; exit 1; }
           done
       - name: MT7902 patch is present in src/
         run: |
           grep -q 'case 0x7902:' src/btmtk.c
           grep -q 'FIRMWARE_MT7902' src/btmtk.h
+          grep -q 'case 0x7902:' src-7.0/btmtk.c
+          grep -q 'FIRMWARE_MT7902' src-7.0/btmtk.h
+      - name: DKMS selects the supported source baseline
+        shell: bash
+        run: |
+          for kernelver in 6.17.0-19-generic 7.0.0-38-generic; do
+            source dkms.conf
+            [[ "$kernelver" =~ $BUILD_EXCLUSIVE_KERNEL ]]
+            case "$kernelver" in
+              6.17.*) test "${BUILT_MODULE_LOCATION[0]}" = src/ ;;
+              7.0.*) test "${BUILT_MODULE_LOCATION[0]}" = src-7.0/ ;;
+            esac
+          done
+          for kernelver in 6.18.0-test 7.1.0-test; do
+            source dkms.conf
+            if [[ "$kernelver" =~ $BUILD_EXCLUSIVE_KERNEL ]]; then exit 1; fi
+          done
 
   build:
-    name: Build against Linux 6.17 headers
+    name: Build against Linux ${{ matrix.series }} headers
     runs-on: ubuntu-24.04
     container: ubuntu:24.04
+    strategy:
+      matrix:
+        include:
+          - series: '6.17'
+            module_src: src
+          - series: '7.0'
+            module_src: src-7.0
     steps:
-      - name: Install toolchain and newest 6.17 headers
+      - name: Install toolchain and matching series headers
         run: |
           apt-get update -qq
           apt-get install -y -qq build-essential git libelf-dev kmod
-          H=$(apt-cache search --names-only '^linux-headers-6\.17\.[0-9]+-[0-9]+-generic$' | awk '{print $1}' | sort -V | tail -1)
-          [ -n "$H" ] || { echo "no linux-headers-6.17.* in the archive any more"; exit 1; }
+          SERIES=$(printf '%s' '${{ matrix.series }}' | sed 's/\./\\./g')
+          H=$(apt-cache search --names-only "^linux-headers-${SERIES}\\.[0-9]+-[0-9]+-generic$" | awk '{print $1}' | sort -V | tail -1)
+          [ -n "$H" ] || { echo "no linux-headers-${{ matrix.series }}.* in the archive"; exit 1; }
           echo "Using $H"
           apt-get install -y -qq "$H"
           echo "KVER=${H#linux-headers-}" >> "$GITHUB_ENV"
@@ -45,6 +70,6 @@ jobs:
         run: make KVER="$KVER"
       - name: Inspect module
         run: |
-          modinfo src/btmtk.ko
-          modinfo src/btmtk.ko | grep -q "vermagic:.*$KVER"
-          modinfo src/btmtk.ko | grep -q '^depends:.*bluetooth'
+          modinfo '${{ matrix.module_src }}/btmtk.ko'
+          modinfo '${{ matrix.module_src }}/btmtk.ko' | grep -q "vermagic:.*$KVER"
+          modinfo '${{ matrix.module_src }}/btmtk.ko' | grep -q '^depends:.*bluetooth'

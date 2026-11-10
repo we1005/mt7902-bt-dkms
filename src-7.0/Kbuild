@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 ljc
+# Out-of-tree build of btmtk with MT7902 support (see ../README.md).
+# The module keeps the stock name "btmtk" so that it replaces the in-kernel
+# module (depmod prefers updates/ over kernel/) and btusb needs no changes.
+obj-m += btmtk.o

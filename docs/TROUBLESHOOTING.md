@@ -3,17 +3,17 @@
 Start with:
 
 ```sh
-uname -r                       # must be 6.17.x
+uname -r                       # must be 6.17.x or 7.0.x
 lsusb | grep -iE '0e8d|13d3|0489'
 modinfo -n btmtk               # should end in updates/dkms/btmtk.ko.zst
-dkms status                    # btmtk-mt7902/1.0, <kernel>: installed
+dkms status                    # btmtk-mt7902/1.1, <kernel>: installed
 hciconfig -a                   # BD Address must not be all zeros
 sudo dmesg | grep -iE 'hci0|btmtk|btusb|firmware'
 ```
 
-## `install.sh` says the kernel is not 6.17.x
+## `install.sh` rejects the kernel series
 
-Intentional. The bundled `btmtk.c` is the v6.17 version. On ≥ 7.1 the kernel already supports MT7902 Bluetooth; on 6.18–7.0 this package is untested.
+Only 6.17.x and 7.0.x have source baselines in this package. On ≥ 7.1 the kernel already supports MT7902 Bluetooth; other series are untested.
 
 ## Still `Unsupported hardware variant (00007902)` after install
 
@@ -36,11 +36,11 @@ Expected for unsigned out-of-tree modules unless the DKMS signing key is enrolle
 ## DKMS build fails
 
 - `linux-headers-$(uname -r)` missing → `sudo apt install linux-headers-$(uname -r)`
-- Show the log: `cat /var/lib/dkms/btmtk-mt7902/1.0/build/make.log`
+- Show the log: `cat /var/lib/dkms/btmtk-mt7902/1.1/build/make.log`
 
 ## After a kernel update Bluetooth stops working
 
-DKMS rebuilds for installed header packages on new 6.17.x kernels. If the new kernel is ≥ 6.18, DKMS refuses by design — check whether it already includes the upstream fix (`uname -r` ≥ 7.1) and run `sudo ./uninstall.sh`.
+DKMS rebuilds for installed header packages on new 6.17.x and 7.0.x kernels. If the new kernel is outside those series, DKMS refuses by design — check whether it already includes the upstream fix (`uname -r` ≥ 7.1) and run `sudo ./uninstall.sh`.
 
 ## Remove everything
 
@@ -49,3 +49,9 @@ sudo ./uninstall.sh
 ```
 
 Reports are welcome: please open an issue with the output of the commands at the top.
+
+## Upgrading from package 1.0 after moving to kernel 7.0
+
+Package 1.0 deliberately restricted builds to 6.17, so it could remain installed for the old kernel while Bluetooth failed on 7.0. Install version 1.1 on the running 7.0 kernel. It selects the 7.0 source baseline rather than rebuilding the older 6.17 implementation. A legacy 1.0 installation on an older kernel is retained.
+
+When removing a legacy 1.0 installation as well, check `dkms status`; `uninstall.sh` in this revision removes version 1.1 only. Remove a remaining 1.0 entry with `sudo dkms remove btmtk-mt7902/1.0 --all` if you also want to restore stock behavior on those older kernels.
