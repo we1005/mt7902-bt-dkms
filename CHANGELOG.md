@@ -9,6 +9,7 @@ All notable changes are documented here. The format follows [Keep a Changelog](h
 - DKMS package 1.1 selects the source baseline for 6.17.x or 7.0.x.
 
 ### Verified
+- Final phone retest after the second 7.0 reboot: 5/5 L2CAP echoes and a completed 4,154-byte OBEX transfer, without module reload or re-pair.
 - On Ubuntu 24.04.4 / 7.0.0-38: module load, Android phone pairing, OBEX transfer, L2CAP echo, S3 suspend/resume and reboot.
 - Build regression against installed 6.17.0-19 headers.
 

@@ -86,3 +86,7 @@ Pairing and transfer on 7.0 supersede the earlier untested status for those oper
 The same machine also had an independent RTL8822BU USB Wi-Fi/Bluetooth adapter installed. Both Wi-Fi interfaces reconnected to a 5 GHz Android hotspot after S3 resume and reboot. A physical unplug/replug of the USB adapter restored its Wi-Fi connection and retained its phone Bluetooth bond; L2CAP echo returned 5/5. These USB results are a coexistence check, not a claim that this package modifies the Realtek driver.
 
 During 60-second upload and 60-second download tests on the Realtek Wi-Fi interface, each Bluetooth radio also completed 20/20 L2CAP echoes. The stock Realtek Wi-Fi driver was retained. Wi-Fi power saving was disabled for the test connections, and USB runtime autosuspend was disabled for the specific Realtek device. No audio-quality or HID conclusions follow from these tests.
+
+### Final phone retest after the second reboot
+
+On 2026-11-10, the unchanged Ubuntu 7.0 boot was retested with the paired Android phone. MT7902 returned all five L2CAP echoes and completed an OBEX transfer of a generated 4,154-byte file (`Status=complete`), accepted on the phone. No module reload, reinstall or re-pair was performed. Earlier phone-unreachable attempts are retained as failed observations; their precise cause was not established. This closes the outstanding phone retest, not audio/HID or long-running validation.
